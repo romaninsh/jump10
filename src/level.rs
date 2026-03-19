@@ -4,6 +4,7 @@ use crate::player::Player;
 pub const LEVEL_COLS: usize = 60;
 pub const LEVEL_ROWS: usize = 13;
 
+// To add a new level, create levels/03.txt (or next number) and add it here:
 const LEVELS: &[&str] = &[
     include_str!("../levels/01.txt"),
     include_str!("../levels/02.txt"),

@@ -1,5 +1,7 @@
 # Jump10
 
+[![Play Online](https://img.shields.io/badge/Play%20Online-GitHub%20Pages-brightgreen)](https://romaninsh.github.io/jump10/)
+
 A retro ASCII platformer reconstructed from a 1993 QBasic game. Built with Rust and macroquad.
 
 ## Controls

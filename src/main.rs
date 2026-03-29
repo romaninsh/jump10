@@ -3,6 +3,7 @@ mod level;
 mod music;
 mod platform;
 mod player;
+mod scroller;
 
 use level::{DEATH, LEVEL_COLS, LEVEL_ROWS, Level, SPLASH, parse_grid};
 use macroquad::prelude::*;
@@ -13,10 +14,10 @@ const STATUS_BAR_HEIGHT: f32 = 30.0;
 
 enum GameState {
     Splash,
-    Intro(f32),  // scroll_y offset
+    Intro(f32), // scroll_y offset
     Playing,
     Death,
-    Win(f32),    // scroll_y offset
+    Win(f32), // scroll_y offset
     Cheater,
 }
 
@@ -246,10 +247,13 @@ async fn main() {
                     let goal_tile = lvl.grid[lvl.player.row as usize][lvl.player.col as usize];
                     if goal_tile == '*' || goal_tile == 's' {
                         let skip_secret = goal_tile == '*';
-                        if skip_secret {
-                            skipped_any = true;
-                        }
-                        if !lvl.advance(skip_secret) {
+                        let old_idx = lvl.idx;
+                        if lvl.advance(skip_secret) {
+                            // Check if any levels were actually skipped
+                            if lvl.idx > old_idx + 1 {
+                                skipped_any = true;
+                            }
+                        } else {
                             music.stop();
                             if skipped_any {
                                 lvl.restart();
@@ -279,12 +283,17 @@ async fn main() {
                 // Secret skip key
                 if is_key_pressed(KeyCode::N) {
                     skipped_any = true;
-                    if !lvl.advance(true) {
+                    if !lvl.advance(false) {
                         lvl.restart();
                         music.stop();
                         state = GameState::Splash;
                     }
                     tick_acc = 0.0;
+                }
+
+                // Update scroller every frame for smooth animation
+                if let Some(ref mut s) = lvl.scroller {
+                    s.update(get_frame_time());
                 }
 
                 // Draw
@@ -293,13 +302,18 @@ async fn main() {
                 for e in &lvl.enemies {
                     e.draw(tile_w, tile_h);
                 }
+                if let Some(ref s) = lvl.scroller {
+                    s.draw(tile_w, tile_h);
+                }
 
                 // Fade level to black during stun
                 if lvl.player.stunned {
                     let t = (lvl.player.stun_timer / 3.0).min(1.0);
                     draw_rectangle(
-                        0.0, 0.0,
-                        screen_width(), screen_height(),
+                        0.0,
+                        0.0,
+                        screen_width(),
+                        screen_height(),
                         Color::new(0.0, 0.0, 0.0, t),
                     );
                 }
@@ -311,8 +325,15 @@ async fn main() {
                     let lives_text = format!("Lives: {}", lvl.player.lives);
                     // Offset to align with "Lives:" in the full status bar
                     let prefix = format!("Level: {}   ", lvl.name());
-                    let offset_x = 10.0 + measure_text(&prefix, None, (STATUS_BAR_HEIGHT * 0.8) as u16, 1.0).width;
-                    draw_text(&lives_text, offset_x, status_y, STATUS_BAR_HEIGHT * 0.8, GREEN);
+                    let offset_x = 10.0
+                        + measure_text(&prefix, None, (STATUS_BAR_HEIGHT * 0.8) as u16, 1.0).width;
+                    draw_text(
+                        &lives_text,
+                        offset_x,
+                        status_y,
+                        STATUS_BAR_HEIGHT * 0.8,
+                        GREEN,
+                    );
                 } else {
                     let status = format!(
                         "Level: {}   Lives: {}   Score: {}   A/D=move  SPC=jump  W/S=climb  P=quit",
@@ -329,7 +350,13 @@ async fn main() {
                 draw_grid(&death_grid, tile_w, tile_h);
 
                 let hint_y = LEVEL_ROWS as f32 * tile_h + STATUS_BAR_HEIGHT * 0.75;
-                draw_text("Skip levels with 'N'", 10.0, hint_y, STATUS_BAR_HEIGHT * 0.8, GREEN);
+                draw_text(
+                    "Skip levels with 'N'",
+                    10.0,
+                    hint_y,
+                    STATUS_BAR_HEIGHT * 0.8,
+                    GREEN,
+                );
 
                 if get_last_key_pressed().is_some() {
                     lvl.restart();

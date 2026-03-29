@@ -1,6 +1,7 @@
 use crate::enemy::Enemy;
 use crate::platform::{MovingPlatform, VerticalPlatform};
 use crate::player::Player;
+use crate::scroller::Scroller;
 
 pub const LEVEL_COLS: usize = 60;
 pub const LEVEL_ROWS: usize = 13;
@@ -24,6 +25,7 @@ pub struct Level {
     pub enemies: Vec<Enemy>,
     pub platforms: Vec<MovingPlatform>,
     pub vplatforms: Vec<VerticalPlatform>,
+    pub scroller: Option<Scroller>,
     pub idx: usize,
     pub score: u32,
 }
@@ -38,17 +40,20 @@ impl Level {
     }
 
     fn load_level(&mut self, idx: usize, lives: i32) {
-        let mut grid = parse_grid(LEVELS[idx].1);
+        let level_text = LEVELS[idx].1;
+        let mut grid = parse_grid(level_text);
         // Clear the secret marker so it doesn't render
         if grid[0][0] == 'S' {
             grid[0][0] = ' ';
         }
+        let scroller = crate::scroller::spawn(&mut grid, level_text);
         self.player = Player::spawn(&mut grid);
         self.player.lives = lives;
         self.enemies = Enemy::spawn_all(&mut grid);
         self.platforms = MovingPlatform::spawn_all(&mut grid);
         self.vplatforms = VerticalPlatform::spawn_all(&mut grid);
         self.grid = grid;
+        self.scroller = scroller;
         self.idx = idx;
         self.score = 0;
     }
@@ -60,6 +65,7 @@ impl Level {
             enemies: Vec::new(),
             platforms: Vec::new(),
             vplatforms: Vec::new(),
+            scroller: None,
             idx: 0,
             score: 0,
         };
@@ -85,20 +91,13 @@ impl Level {
     }
 
     pub fn restart(&mut self) {
-        self.idx = 0;
-        let mut grid = parse_grid(LEVELS[self.idx].1);
-        self.player = Player::spawn(&mut grid);
-        self.enemies = Enemy::spawn_all(&mut grid);
-        self.platforms = MovingPlatform::spawn_all(&mut grid);
-        self.vplatforms = VerticalPlatform::spawn_all(&mut grid);
-        self.grid = grid;
-        self.score = 0;
+        self.load_level(0, 10);
     }
 }
 
 pub fn parse_grid(text: &str) -> Vec<Vec<char>> {
     let mut grid = Vec::new();
-    for line in text.lines() {
+    for line in text.lines().take(LEVEL_ROWS) {
         let mut row: Vec<char> = line.chars().collect();
         row.resize(LEVEL_COLS, ' ');
         grid.push(row);

@@ -15,3 +15,7 @@
 what is your favourite sandwich, player?
 
 hmm your favourite is now ham and cheese
+
+does this level look like a sandwich?
+
+do you feel like ham?

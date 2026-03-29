@@ -5,21 +5,19 @@ use crate::player::Player;
 pub const LEVEL_COLS: usize = 60;
 pub const LEVEL_ROWS: usize = 13;
 
-// To add a new level, create levels/03.txt (or next number) and add it here:
-const LEVELS: &[&str] = &[
-    include_str!("../levels/01.txt"),
-    include_str!("../levels/02.txt"),
-    include_str!("../levels/03.txt"),
-    include_str!("../levels/04.txt"),
-    include_str!("../levels/04s.txt"),
-    include_str!("../levels/04ss.txt"),
-    include_str!("../levels/05.txt"),
-    include_str!("../levels/06.txt"),
+macro_rules! levels {
+    ($($name:literal),* $(,)?) => {
+        &[$(($name, include_str!(concat!("../levels/", $name, ".txt"))),)*]
+    };
+}
+
+// To add a new level, just add its basename (without .txt) to this list:
+const LEVELS: &[(&str, &str)] = levels![
+    "01", "02", "02s", "03", "04", "04s", "04ss", "05", "06", "07", "08", "09"
 ];
 
 pub const SPLASH: &str = include_str!("../splash/splash.txt");
 pub const DEATH: &str = include_str!("../splash/death.txt");
-
 pub struct Level {
     pub grid: Vec<Vec<char>>,
     pub player: Player,
@@ -31,35 +29,55 @@ pub struct Level {
 }
 
 impl Level {
-    pub fn load(idx: usize) -> Self {
-        let mut grid = parse_grid(LEVELS[idx]);
-        let player = Player::spawn(&mut grid);
-        let enemies = Enemy::spawn_all(&mut grid);
-        let platforms = MovingPlatform::spawn_all(&mut grid);
-        let vplatforms = VerticalPlatform::spawn_all(&mut grid);
-        Level {
-            grid,
-            player,
-            enemies,
-            platforms,
-            vplatforms,
-            idx,
-            score: 0,
-        }
+    pub fn is_secret(idx: usize) -> bool {
+        LEVELS[idx].1.starts_with('S')
     }
 
-    pub fn advance(&mut self) -> bool {
+    pub fn name(&self) -> &'static str {
+        LEVELS[self.idx].0
+    }
+
+    fn load_level(&mut self, idx: usize, lives: i32) {
+        let mut grid = parse_grid(LEVELS[idx].1);
+        // Clear the secret marker so it doesn't render
+        if grid[0][0] == 'S' {
+            grid[0][0] = ' ';
+        }
+        self.player = Player::spawn(&mut grid);
+        self.player.lives = lives;
+        self.enemies = Enemy::spawn_all(&mut grid);
+        self.platforms = MovingPlatform::spawn_all(&mut grid);
+        self.vplatforms = VerticalPlatform::spawn_all(&mut grid);
+        self.grid = grid;
+        self.idx = idx;
+        self.score = 0;
+    }
+
+    pub fn load(idx: usize) -> Self {
+        let mut lvl = Level {
+            grid: Vec::new(),
+            player: Player::spawn(&mut vec![vec![' '; LEVEL_COLS]; LEVEL_ROWS]),
+            enemies: Vec::new(),
+            platforms: Vec::new(),
+            vplatforms: Vec::new(),
+            idx: 0,
+            score: 0,
+        };
+        lvl.load_level(idx, 10);
+        lvl
+    }
+
+    /// Advance to the next level. If `skip_secret` is true, secret levels are skipped.
+    pub fn advance(&mut self, skip_secret: bool) -> bool {
         let lives = self.player.lives;
-        self.idx += 1;
-        if self.idx < LEVELS.len() {
-            let mut grid = parse_grid(LEVELS[self.idx]);
-            self.player = Player::spawn(&mut grid);
-            self.player.lives = lives;
-            self.enemies = Enemy::spawn_all(&mut grid);
-            self.platforms = MovingPlatform::spawn_all(&mut grid);
-            self.vplatforms = VerticalPlatform::spawn_all(&mut grid);
-            self.grid = grid;
-            self.score = 0;
+        let mut next = self.idx + 1;
+        if skip_secret {
+            while next < LEVELS.len() && Self::is_secret(next) {
+                next += 1;
+            }
+        }
+        if next < LEVELS.len() {
+            self.load_level(next, lives);
             true
         } else {
             false
@@ -68,7 +86,7 @@ impl Level {
 
     pub fn restart(&mut self) {
         self.idx = 0;
-        let mut grid = parse_grid(LEVELS[self.idx]);
+        let mut grid = parse_grid(LEVELS[self.idx].1);
         self.player = Player::spawn(&mut grid);
         self.enemies = Enemy::spawn_all(&mut grid);
         self.platforms = MovingPlatform::spawn_all(&mut grid);

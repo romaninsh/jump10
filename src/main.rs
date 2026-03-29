@@ -13,42 +13,23 @@ const STATUS_BAR_HEIGHT: f32 = 30.0;
 
 enum GameState {
     Splash,
-    Intro(f32), // scroll_y offset
+    Intro(f32),  // scroll_y offset
     Playing,
     Death,
+    Win(f32),    // scroll_y offset
+    Cheater,
 }
 
-const INTRO_TEXT: &str = "\
-Once upon a time, you were playing
-a classic retro game with you as
-a dollar sign.
-
-You were having fun but decided to
-go grab a sandwich as you are
-quite hungry.
-
-You leave the game running.
-
-You slowly make your way to the
-fridge, avoiding small talk with
-your parents.
-
-But as you open the fridge and
-grab the sandwich, everything
-turns black.
-
-When you open your eyes you
-realise you have been turned
-into a dollar sign.
-
-Your only way out is to
-finish the game.";
+const INTRO_TEXT: &str = include_str!("../splash/scroller.txt");
+const WIN_TEXT: &str = include_str!("../splash/win.txt");
+const CHEATER: &str = include_str!("../splash/cheater.txt");
 
 const INTRO_SCROLL_SPEED: f32 = 30.0;
 fn tile_color(ch: char) -> Option<Color> {
     match ch {
         '#' => Some(Color::new(0.0, 0.8, 0.0, 1.0)),
         '*' => Some(Color::new(1.0, 1.0, 0.0, 1.0)),
+        's' => Some(Color::new(1.0, 0.0, 1.0, 1.0)),
         '^' | 'v' | '>' | '<' => Some(Color::new(0.0, 0.6, 0.0, 1.0)),
         'o' => Some(Color::new(1.0, 0.84, 0.0, 1.0)),
         '%' => Some(Color::new(0.6, 0.6, 0.6, 1.0)),
@@ -111,12 +92,14 @@ fn window_conf() -> Conf {
 async fn main() {
     let splash_grid = parse_grid(SPLASH);
     let death_grid = parse_grid(DEATH);
+    let cheater_grid = parse_grid(CHEATER);
 
     let music = Music::new();
 
     let mut state = GameState::Splash;
     let mut lvl = Level::load(0);
     let mut tick_acc = 0.0f64;
+    let mut skipped_any = false;
 
     loop {
         let tile_w = screen_width() / LEVEL_COLS as f32;
@@ -260,24 +243,43 @@ async fn main() {
                     }
 
                     // Goal reached
-                    if lvl.grid[lvl.player.row as usize][lvl.player.col as usize] == '*' {
-                        if !lvl.advance() {
-                            lvl.restart();
+                    let goal_tile = lvl.grid[lvl.player.row as usize][lvl.player.col as usize];
+                    if goal_tile == '*' || goal_tile == 's' {
+                        let skip_secret = goal_tile == '*';
+                        if skip_secret {
+                            skipped_any = true;
+                        }
+                        if !lvl.advance(skip_secret) {
                             music.stop();
-                            state = GameState::Splash;
+                            if skipped_any {
+                                lvl.restart();
+                                state = GameState::Cheater;
+                            } else {
+                                state = GameState::Win(screen_height());
+                            }
                         }
                         tick_acc = 0.0;
                     }
 
-                    // Death check
-                    if !lvl.player.alive {
+                    // Death check — on secret levels, any death advances to next non-secret level
+                    if (!lvl.player.alive || lvl.player.stunned) && Level::is_secret(lvl.idx) {
+                        lvl.player.stunned = false;
+                        skipped_any = true;
+                        if !lvl.advance(true) {
+                            music.stop();
+                            lvl.restart();
+                            state = GameState::Splash;
+                        }
+                        tick_acc = 0.0;
+                    } else if !lvl.player.alive {
                         state = GameState::Death;
                     }
                 }
 
                 // Secret skip key
                 if is_key_pressed(KeyCode::N) {
-                    if !lvl.advance() {
+                    skipped_any = true;
+                    if !lvl.advance(true) {
                         lvl.restart();
                         music.stop();
                         state = GameState::Splash;
@@ -308,13 +310,13 @@ async fn main() {
                 if lvl.player.stunned {
                     let lives_text = format!("Lives: {}", lvl.player.lives);
                     // Offset to align with "Lives:" in the full status bar
-                    let prefix = format!("Level: {}   ", lvl.idx + 1);
+                    let prefix = format!("Level: {}   ", lvl.name());
                     let offset_x = 10.0 + measure_text(&prefix, None, (STATUS_BAR_HEIGHT * 0.8) as u16, 1.0).width;
                     draw_text(&lives_text, offset_x, status_y, STATUS_BAR_HEIGHT * 0.8, GREEN);
                 } else {
                     let status = format!(
                         "Level: {}   Lives: {}   Score: {}   A/D=move  SPC=jump  W/S=climb  P=quit",
-                        lvl.idx + 1,
+                        lvl.name(),
                         lvl.player.lives,
                         lvl.score
                     );
@@ -326,11 +328,55 @@ async fn main() {
                 clear_background(BLACK);
                 draw_grid(&death_grid, tile_w, tile_h);
 
+                let hint_y = LEVEL_ROWS as f32 * tile_h + STATUS_BAR_HEIGHT * 0.75;
+                draw_text("Skip levels with 'N'", 10.0, hint_y, STATUS_BAR_HEIGHT * 0.8, GREEN);
+
                 if get_last_key_pressed().is_some() {
                     lvl.restart();
+                    skipped_any = false;
                     tick_acc = 0.0;
                     music.play();
                     state = GameState::Playing;
+                }
+            }
+
+            GameState::Cheater => {
+                clear_background(BLACK);
+                draw_grid(&cheater_grid, tile_w, tile_h);
+
+                if get_last_key_pressed().is_some() {
+                    skipped_any = false;
+                    state = GameState::Splash;
+                }
+            }
+
+            GameState::Win(ref mut scroll_y) => {
+                clear_background(BLACK);
+
+                let font_size = 28.0;
+                let line_height = font_size * 1.4;
+                let lines: Vec<&str> = WIN_TEXT.lines().collect();
+                let total_height = lines.len() as f32 * line_height;
+
+                for (i, line) in lines.iter().enumerate() {
+                    let y = *scroll_y + i as f32 * line_height;
+                    if y > -line_height && y < screen_height() {
+                        let text_width = measure_text(line, None, font_size as u16, 1.0).width;
+                        let x = (screen_width() - text_width) / 2.0;
+                        let dist_from_center =
+                            ((y - screen_height() / 2.0) / (screen_height() / 2.0)).abs();
+                        let alpha = (1.0 - dist_from_center).max(0.0);
+                        let color = Color::new(1.0, 1.0, 0.0, alpha);
+                        draw_text(line, x, y, font_size, color);
+                    }
+                }
+
+                *scroll_y -= INTRO_SCROLL_SPEED * get_frame_time();
+
+                if *scroll_y + total_height < 0.0 || get_last_key_pressed().is_some() {
+                    lvl.restart();
+                    skipped_any = false;
+                    state = GameState::Splash;
                 }
             }
         }

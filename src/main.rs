@@ -282,7 +282,7 @@ async fn main() {
 
                 // Secret skip key
                 if is_key_pressed(KeyCode::N) {
-                    skipped_any = true;
+                    // skipped_any = true;
                     if !lvl.advance(false) {
                         lvl.restart();
                         music.stop();

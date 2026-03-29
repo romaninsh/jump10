@@ -11,6 +11,10 @@ const LEVELS: &[&str] = &[
     include_str!("../levels/02.txt"),
     include_str!("../levels/03.txt"),
     include_str!("../levels/04.txt"),
+    include_str!("../levels/04s.txt"),
+    include_str!("../levels/04ss.txt"),
+    include_str!("../levels/05.txt"),
+    include_str!("../levels/06.txt"),
 ];
 
 pub const SPLASH: &str = include_str!("../splash/splash.txt");
@@ -23,6 +27,7 @@ pub struct Level {
     pub platforms: Vec<MovingPlatform>,
     pub vplatforms: Vec<VerticalPlatform>,
     pub idx: usize,
+    pub score: u32,
 }
 
 impl Level {
@@ -39,6 +44,7 @@ impl Level {
             platforms,
             vplatforms,
             idx,
+            score: 0,
         }
     }
 
@@ -53,6 +59,7 @@ impl Level {
             self.platforms = MovingPlatform::spawn_all(&mut grid);
             self.vplatforms = VerticalPlatform::spawn_all(&mut grid);
             self.grid = grid;
+            self.score = 0;
             true
         } else {
             false
@@ -67,6 +74,7 @@ impl Level {
         self.platforms = MovingPlatform::spawn_all(&mut grid);
         self.vplatforms = VerticalPlatform::spawn_all(&mut grid);
         self.grid = grid;
+        self.score = 0;
     }
 }
 

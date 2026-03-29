@@ -50,6 +50,9 @@ fn tile_color(ch: char) -> Option<Color> {
         '#' => Some(Color::new(0.0, 0.8, 0.0, 1.0)),
         '*' => Some(Color::new(1.0, 1.0, 0.0, 1.0)),
         '^' | 'v' | '>' | '<' => Some(Color::new(0.0, 0.6, 0.0, 1.0)),
+        'o' => Some(Color::new(1.0, 0.84, 0.0, 1.0)),
+        '%' => Some(Color::new(0.6, 0.6, 0.6, 1.0)),
+        'k' => Some(Color::new(0.0, 1.0, 1.0, 1.0)),
         'z' => Some(Color::new(0.0, 0.5, 1.0, 1.0)),
         'H' => Some(Color::new(0.5, 0.3, 0.0, 1.0)),
         '/' => Some(Color::new(0.5, 0.5, 0.0, 1.0)),
@@ -153,7 +156,7 @@ async fn main() {
                 *scroll_y -= INTRO_SCROLL_SPEED * get_frame_time();
 
                 if *scroll_y + total_height < 0.0 || get_last_key_pressed().is_some() {
-                    // music.play();
+                    music.play();
                     state = GameState::Playing;
                 }
             }
@@ -220,6 +223,42 @@ async fn main() {
                         music.play_death();
                     }
 
+                    // Spring key: turn all # into z
+                    if !lvl.player.stunned && lvl.player.alive {
+                        let pr = lvl.player.row as usize;
+                        let pc = lvl.player.col as usize;
+                        if lvl.grid[pr][pc] == 'k' {
+                            lvl.grid[pr][pc] = ' ';
+                            for row in lvl.grid.iter_mut() {
+                                for ch in row.iter_mut() {
+                                    if *ch == '#' {
+                                        *ch = 'z';
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Coin collection
+                    if !lvl.player.stunned && lvl.player.alive {
+                        let pr = lvl.player.row as usize;
+                        let pc = lvl.player.col as usize;
+                        if lvl.grid[pr][pc] == 'o' {
+                            lvl.grid[pr][pc] = ' ';
+                            lvl.score += 1;
+                            // Unlock padlocks at 10 coins
+                            if lvl.score >= 10 {
+                                for row in lvl.grid.iter_mut() {
+                                    for ch in row.iter_mut() {
+                                        if *ch == '%' {
+                                            *ch = ' ';
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     // Goal reached
                     if lvl.grid[lvl.player.row as usize][lvl.player.col as usize] == '*' {
                         if !lvl.advance() {
@@ -274,9 +313,10 @@ async fn main() {
                     draw_text(&lives_text, offset_x, status_y, STATUS_BAR_HEIGHT * 0.8, GREEN);
                 } else {
                     let status = format!(
-                        "Level: {}   Lives: {}   A/D=move  SPC=jump  W/S=climb  P=quit",
+                        "Level: {}   Lives: {}   Score: {}   A/D=move  SPC=jump  W/S=climb  P=quit",
                         lvl.idx + 1,
-                        lvl.player.lives
+                        lvl.player.lives,
+                        lvl.score
                     );
                     draw_text(&status, 10.0, status_y, STATUS_BAR_HEIGHT * 0.8, GREEN);
                 }
@@ -289,7 +329,7 @@ async fn main() {
                 if get_last_key_pressed().is_some() {
                     lvl.restart();
                     tick_acc = 0.0;
-                    // music.play();
+                    music.play();
                     state = GameState::Playing;
                 }
             }

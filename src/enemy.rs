@@ -49,7 +49,7 @@ impl Enemy {
             return false;
         }
         let ch = grid[row as usize][col as usize];
-        ch != '#' && ch != '=' && ch != 'H'
+        ch != '#' && ch != '=' && ch != 'H' && ch != '%'
     }
 
     fn has_ground(&self, grid: &[Vec<char>], col: i32, row: i32) -> bool {
@@ -58,7 +58,7 @@ impl Enemy {
             return true;
         }
         let ch = grid[below as usize][col as usize];
-        ch == '#' || ch == '=' || ch == 'H'
+        ch == '#' || ch == '=' || ch == 'H' || ch == '%'
     }
 
     pub fn draw(&self, tile_w: f32, tile_h: f32) {

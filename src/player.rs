@@ -219,7 +219,7 @@ impl Player {
             return false;
         }
         let ch = grid[row as usize][col as usize];
-        ch != '#' && ch != '=' && ch != 'H'
+        ch != '#' && ch != '=' && ch != 'H' && ch != '%'
     }
 
     pub fn draw(&self, tile_w: f32, tile_h: f32) {

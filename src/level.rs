@@ -1,4 +1,5 @@
 use crate::enemy::Enemy;
+use crate::platform::MovingPlatform;
 use crate::player::Player;
 
 pub const LEVEL_COLS: usize = 60;
@@ -17,6 +18,7 @@ pub struct Level {
     pub grid: Vec<Vec<char>>,
     pub player: Player,
     pub enemies: Vec<Enemy>,
+    pub platforms: Vec<MovingPlatform>,
     pub idx: usize,
 }
 
@@ -25,7 +27,8 @@ impl Level {
         let mut grid = parse_grid(LEVELS[idx]);
         let player = Player::spawn(&mut grid);
         let enemies = Enemy::spawn_all(&mut grid);
-        Level { grid, player, enemies, idx }
+        let platforms = MovingPlatform::spawn_all(&mut grid);
+        Level { grid, player, enemies, platforms, idx }
     }
 
     pub fn advance(&mut self) -> bool {
@@ -36,6 +39,7 @@ impl Level {
             self.player = Player::spawn(&mut grid);
             self.player.lives = lives;
             self.enemies = Enemy::spawn_all(&mut grid);
+            self.platforms = MovingPlatform::spawn_all(&mut grid);
             self.grid = grid;
             true
         } else {
@@ -48,6 +52,7 @@ impl Level {
         let mut grid = parse_grid(LEVELS[self.idx]);
         self.player = Player::spawn(&mut grid);
         self.enemies = Enemy::spawn_all(&mut grid);
+        self.platforms = MovingPlatform::spawn_all(&mut grid);
         self.grid = grid;
     }
 }

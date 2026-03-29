@@ -1,5 +1,5 @@
 use crate::enemy::Enemy;
-use crate::platform::MovingPlatform;
+use crate::platform::{MovingPlatform, VerticalPlatform};
 use crate::player::Player;
 
 pub const LEVEL_COLS: usize = 60;
@@ -9,6 +9,7 @@ pub const LEVEL_ROWS: usize = 13;
 const LEVELS: &[&str] = &[
     include_str!("../levels/01.txt"),
     include_str!("../levels/02.txt"),
+    include_str!("../levels/03.txt"),
 ];
 
 pub const SPLASH: &str = include_str!("../splash/splash.txt");
@@ -19,6 +20,7 @@ pub struct Level {
     pub player: Player,
     pub enemies: Vec<Enemy>,
     pub platforms: Vec<MovingPlatform>,
+    pub vplatforms: Vec<VerticalPlatform>,
     pub idx: usize,
 }
 
@@ -28,7 +30,15 @@ impl Level {
         let player = Player::spawn(&mut grid);
         let enemies = Enemy::spawn_all(&mut grid);
         let platforms = MovingPlatform::spawn_all(&mut grid);
-        Level { grid, player, enemies, platforms, idx }
+        let vplatforms = VerticalPlatform::spawn_all(&mut grid);
+        Level {
+            grid,
+            player,
+            enemies,
+            platforms,
+            vplatforms,
+            idx,
+        }
     }
 
     pub fn advance(&mut self) -> bool {
@@ -40,6 +50,7 @@ impl Level {
             self.player.lives = lives;
             self.enemies = Enemy::spawn_all(&mut grid);
             self.platforms = MovingPlatform::spawn_all(&mut grid);
+            self.vplatforms = VerticalPlatform::spawn_all(&mut grid);
             self.grid = grid;
             true
         } else {
@@ -53,6 +64,7 @@ impl Level {
         self.player = Player::spawn(&mut grid);
         self.enemies = Enemy::spawn_all(&mut grid);
         self.platforms = MovingPlatform::spawn_all(&mut grid);
+        self.vplatforms = VerticalPlatform::spawn_all(&mut grid);
         self.grid = grid;
     }
 }

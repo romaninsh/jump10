@@ -1,6 +1,164 @@
 use crate::enemy::Enemy;
 use crate::player::Player;
 
+pub struct VerticalPlatform {
+    pub row: usize,         // current row of the '=' tiles
+    pub start_col: usize,   // leftmost '=' column
+    pub width: usize,       // number of '=' tiles
+    pub top_bound: usize,   // row of top '+' (exclusive)
+    pub bottom_bound: usize,// row of bottom '+' (exclusive)
+    pub dir: i32,            // -1 up, 1 down
+    pub half_tick: bool,
+}
+
+impl VerticalPlatform {
+    /// Scan for vertical platform patterns: a column with + | ... = ... | +
+    pub fn spawn_all(grid: &mut Vec<Vec<char>>) -> Vec<Self> {
+        let mut platforms = Vec::new();
+        let rows = grid.len();
+        let cols = if rows > 0 { grid[0].len() } else { 0 };
+
+        // Track which '=' segments we've already claimed
+        let mut claimed: Vec<Vec<bool>> = vec![vec![false; cols]; rows];
+
+        for c in 0..cols {
+            for r in 0..rows {
+                if grid[r][c] != '+' {
+                    continue;
+                }
+
+                // Look down from this '+' for '|' track, then '=' row, then '|' track, then '+'
+                let mut scan = r + 1;
+
+                // Skip '|' going down
+                while scan < rows && grid[scan][c] == '|' {
+                    scan += 1;
+                }
+                if scan == r + 1 || scan >= rows {
+                    continue; // no '|' found
+                }
+
+                let eq_row = scan;
+                if grid[eq_row][c] != '=' {
+                    continue;
+                }
+
+                // Find the full '=' segment on this row
+                let mut eq_left = c;
+                while eq_left > 0 && grid[eq_row][eq_left - 1] == '=' {
+                    eq_left -= 1;
+                }
+                let mut eq_right = c;
+                while eq_right + 1 < cols && grid[eq_row][eq_right + 1] == '=' {
+                    eq_right += 1;
+                }
+
+                // Already claimed?
+                if claimed[eq_row][eq_left] {
+                    continue;
+                }
+
+                // Continue down past '=' row: expect '|' then '+'
+                scan = eq_row + 1;
+                while scan < rows && grid[scan][c] == '|' {
+                    scan += 1;
+                }
+                if scan == eq_row + 1 || scan >= rows || grid[scan][c] != '+' {
+                    continue;
+                }
+
+                let bottom_plus = scan;
+                let width = eq_right - eq_left + 1;
+
+                // Mark claimed
+                for col in eq_left..=eq_right {
+                    claimed[eq_row][col] = true;
+                }
+
+                platforms.push(VerticalPlatform {
+                    row: eq_row,
+                    start_col: eq_left,
+                    width,
+                    top_bound: r,
+                    bottom_bound: bottom_plus,
+                    dir: 1,
+                    half_tick: false,
+                });
+
+                // Clear '+' and '|' from grid, keep '='
+                grid[r][c] = ' ';
+                grid[bottom_plus][c] = ' ';
+                for row in r + 1..eq_row {
+                    if grid[row][c] == '|' {
+                        grid[row][c] = ' ';
+                    }
+                }
+                for row in eq_row + 1..bottom_plus {
+                    if grid[row][c] == '|' {
+                        grid[row][c] = ' ';
+                    }
+                }
+            }
+        }
+        platforms
+    }
+
+    pub fn update(
+        &mut self,
+        grid: &mut Vec<Vec<char>>,
+        player: &mut Player,
+        enemies: &mut Vec<Enemy>,
+    ) {
+        self.half_tick = !self.half_tick;
+        if !self.half_tick {
+            return;
+        }
+
+        let old_row = self.row;
+
+        // Check bounds and reverse if needed
+        if self.dir > 0 && self.row + 1 >= self.bottom_bound {
+            self.dir = -1;
+        } else if self.dir < 0 && self.row <= self.top_bound + 1 {
+            self.dir = 1;
+        }
+
+        let new_row = (self.row as i32 + self.dir) as usize;
+
+        // Clear old row
+        for col in self.start_col..self.start_col + self.width {
+            grid[old_row][col] = ' ';
+        }
+        // Write new row
+        for col in self.start_col..self.start_col + self.width {
+            grid[new_row][col] = '=';
+        }
+
+        self.row = new_row;
+
+        // Carry passengers (entities on row above the platform)
+        let old_passenger_row = old_row as i32 - 1;
+        let left = self.start_col as i32;
+        let right = (self.start_col + self.width - 1) as i32;
+
+        if player.row == old_passenger_row
+            && player.col >= left
+            && player.col <= right
+        {
+            player.row += self.dir;
+        }
+
+        for e in enemies.iter_mut() {
+            if e.row == old_passenger_row
+                && e.col >= left
+                && e.col <= right
+            {
+                e.row += self.dir;
+            }
+        }
+    }
+}
+
 pub struct MovingPlatform {
     pub row: usize,
     pub left_bound: usize,

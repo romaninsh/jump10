@@ -73,7 +73,7 @@ impl Player {
         let want_up = is_key_down(KeyCode::W) || is_key_down(KeyCode::Up) || is_key_down(KeyCode::Space);
         let want_down = is_key_down(KeyCode::S) || is_key_down(KeyCode::Down);
 
-        let current_tile = self.tile_at(grid, self.col, self.row);
+        let _current_tile = self.tile_at(grid, self.col, self.row);
         let below_tile = self.tile_at(grid, self.col, self.row + 1);
 
         // Enter ladder: on ground, H is below, press down

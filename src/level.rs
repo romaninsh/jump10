@@ -14,7 +14,7 @@ macro_rules! levels {
 
 // To add a new level, just add its basename (without .txt) to this list:
 const LEVELS: &[(&str, &str)] = levels![
-    "01", "02", "02s", "03", "04", "04s", "04ss", "05", "06", "07", "08", "09"
+    "01", "02", "02s", "03", "04", "04s", "04ss", "05", "06", "07", "08", "09", "10"
 ];
 
 pub const SPLASH: &str = include_str!("../splash/splash.txt");

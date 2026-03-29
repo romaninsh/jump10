@@ -1,21 +1,26 @@
->
->
->
->   *  ^    ^    ^    ^    ^    ^
->  #################################### H
->    !!!!!!!!!!!!!!!!                   H
->                                       ###H
->                 ##z     @         ##     H
->               #      ####################H
->         $   ###
->        ###
->
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+*                   !!!!!!!!!!!!!!!!!!!!!!!!
+#####
+      ##     ##    #  ##  #     #
+@@@
+#################################
+                      ^^^^^^^^^^^    z###
+                    <###########            z###z
+             ##             ###     ####
+       ##        ##  #####    #          ###
+ $   ##             #      ####               ##
+####       z        #  @           #zzzzzzzzzz#
+^^^^^^^^^^^^^^^^^^^^############################
 
-what is your favourite sandwich, player?
+there are some hidden keystrokes you can use!
 
-hmm your favourite is now ham and cheese
+i wonder what they do?
 
-does this level look like a sandwich?
+mabye give you more lives?
 
-do you feel like ham?
+or exit the game...
+
+hahaha
+
+maybe ....... nothing :)
+
+get tricked bozo

@@ -10,6 +10,7 @@ const LEVELS: &[&str] = &[
     include_str!("../levels/01.txt"),
     include_str!("../levels/02.txt"),
     include_str!("../levels/03.txt"),
+    include_str!("../levels/04.txt"),
 ];
 
 pub const SPLASH: &str = include_str!("../splash/splash.txt");
